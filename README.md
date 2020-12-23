@@ -9,6 +9,12 @@
 
 ## 如何使用
 
+### 环境配置
+
+```bash
+pip install -r requirements.txt
+```
+
 ### 数据准备
 
 ```bash

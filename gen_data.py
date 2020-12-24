@@ -60,7 +60,7 @@ if __name__ == '__main__':
         save_data(f"{data_dir}/dev.txt", valid_corpus, name)
 
         save_list(f"{data_dir}/test.txt", test_corpus)
-        save_list(f"{data_dir}/label.txt", list(set(labels)))
+        save_list(f"{data_dir}/label.txt", sorted(list(set(labels))))
 
         print(f"{name} dataset train/dev/test: {len(train_corpus)}/{len(valid_corpus)}/{len(test_corpus)}")
         seq_lens = [len(text) if isinstance(text, str) else len(text[0]) + len(text[1]) for text in texts + test_corpus]

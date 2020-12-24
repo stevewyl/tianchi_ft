@@ -40,25 +40,20 @@ def acc_and_f1(preds, labels):
     return {"acc": acc, "f1": f1}
 
 def compute_metrics(task_name, preds, labels):
-    assert len(preds) == len(labels)
-    if task_name.startswith("tnews"):
-        return acc_and_f1(preds, labels)
-    elif task_name.startswith("ocemotion"):
-        return acc_and_f1(preds, labels)
-    elif task_name.startswith("ocnli"):
-        return acc_and_f1(preds, labels)
-    else:
-        raise KeyError(task_name)
+    assert len(preds) == len(labels), f"Predictions and labels have mismatched lengths {len(preds)} and {len(labels)}"
+    return acc_and_f1(preds, labels)
 
 TASK_OUTPUT_MODE = {
     "ocemotion": "classification",
     "ocnli": "classification",
-    "tnews": "classification"
+    "tnews": "classification",
+    "enews": "classification"
 }
 TASK_NUM_LABELS = {
     "ocemotion": 7,
     "ocnli": 3,
-    "tnews": 15
+    "tnews": 15,
+    "enews": 3
 }
 
 def main():
@@ -135,13 +130,13 @@ def main():
         cache_dir=model_args.cache_dir
     )
 
+    logger.info(f"Load model from {model_args.model_name_or_path}")
     model = BertForSequenceClassification.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
         cache_dir=model_args.cache_dir
     )
-    # print(model)
 
     def build_compute_metrics_fn(task_name: str) -> Callable[[EvalPrediction], Dict]:
         def compute_metrics_fn(p: EvalPrediction):
@@ -194,25 +189,25 @@ def main():
             eval_results.update(eval_result)
 
     if training_args.do_predict:
-        logging.info("*** Test ***")
+        logging.info("*** Predict ***")
 
         predictions = trainer.predict(test_dataset=test_dataset).predictions
         if TASK_OUTPUT_MODE[test_dataset.args.task_name] == "classification":
             predictions = np.argmax(predictions, axis=1)
 
         output_test_file = os.path.join(
-            training_args.output_dir, f"test_results_{test_dataset.args.task_name}.txt"
+            training_args.output_dir, f"{test_dataset.args.task_name}_predict.json"
         )
         if trainer.is_world_process_zero():
             with open(output_test_file, "w") as writer:
                 logger.info("***** Test results {} *****".format(test_dataset.args.task_name))
-                writer.write("index\tprediction\n")
-                for index, item in enumerate(predictions):
+                for index, pred in enumerate(predictions):
                     if TASK_OUTPUT_MODE[test_dataset.args.task_name] == "regression":
-                        writer.write("%d\t%3.3f\n" % (index, item))
+                        writer.write("%d\t%3.3f\n" % (index, pred))
                     else:
-                        item = test_dataset.get_labels()[item]
-                        writer.write("%d\t%s\n" % (index, item))
+                        label = test_dataset.get_labels()[pred]
+                        line = {"id": index, "label": label}
+                        writer.write(str(line).replace("\'", "\"") + "\n")
     return eval_results
 
 

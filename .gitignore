@@ -132,3 +132,7 @@ model_result
 data/ocnli
 data/ocemotion
 data/tnews
+data/enews
+
+.vscode
+runs

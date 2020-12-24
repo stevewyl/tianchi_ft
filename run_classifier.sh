@@ -1,6 +1,6 @@
 TASK_NAME=$1
 MODEL_NAME=${2:-"roberta"}
-MAX_SEQ_LEN=${3:-48}
+MAX_SEQ_LEN=${3:-128}
 NUM_EPOCHS=${4:-5}
 MODEL_NAME_FULL="hfl/chinese-"$MODEL_NAME"-wwm-ext"
 OUTPUT_DIR="model_result/"$TASK_NAME"_"$MODEL_NAME"_epoch"$NUM_EPOCHS
@@ -20,8 +20,10 @@ python run_classifier.py \
     --per_device_train_batch_size 128 \
     --per_device_eval_batch_size 128 \
     --learning_rate 2e-5 \
+    --warmup_steps 100 \
     --save_steps 500 \
-    --eval_step 100 \
+    --eval_steps 100 \
+    --save_total_limit 5 \
     --evaluation_strategy steps \
     --num_train_epochs $NUM_EPOCHS \
     --output_dir $OUTPUT_DIR \

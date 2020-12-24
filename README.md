@@ -32,5 +32,11 @@ python gen_data.py
 bash run_classifier.sh $DATASET_NAME $PRE_TRAINED_MODEL_NAME $MAX_SEQ_LEN
 ```
 
+### 提交成绩
+
+```bash
+bash submit.sh
+```
+
 ## 模型结果
 

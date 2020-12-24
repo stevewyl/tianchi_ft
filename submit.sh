@@ -1,0 +1,1 @@
+zip submit.zip data/ocemotion/ocemotion_predict.json data/ocnli/ocnli_predict.json data/tnews/tnews_predict.json

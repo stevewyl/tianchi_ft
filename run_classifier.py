@@ -9,7 +9,8 @@ import numpy as np
 from transformers import BertTokenizer, BertModel, BertConfig, BertForSequenceClassification
 from transformers import EvalPrediction, Trainer, set_seed
 from transformers import HfArgumentParser, TrainingArguments
-from sklearn.metrics import accuracy_score, f1_score
+from transformers import EarlyStoppingCallback
+from sklearn.metrics import accuracy_score, f1_score, classification_report
 
 from dataset import DataTrainingArguments, ClassifierDataset
 
@@ -149,12 +150,16 @@ def main():
         return compute_metrics_fn
 
     # Initialize our Trainer
+    callbacks = [
+        EarlyStoppingCallback(5)
+    ]
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        compute_metrics=build_compute_metrics_fn(data_args.task_name)
+        compute_metrics=build_compute_metrics_fn(data_args.task_name),
+        callbacks=callbacks
     )
 
     # Training
@@ -188,6 +193,17 @@ def main():
 
             eval_results.update(eval_result)
 
+        predictions = trainer.predict(eval_dataset).predictions
+        if TASK_OUTPUT_MODE[test_dataset.args.task_name] == "classification":
+            predictions = np.argmax(predictions, axis=1)
+
+        label_maps = eval_dataset.get_labels()
+        y_tures = [label_maps[sample.label] for sample in eval_dataset]
+        y_preds = [label_maps[pred] for pred in predictions]
+
+        logger.info("Classification Report (Dev Set)")
+        logger.info("\n" + classification_report(y_tures, y_preds, digits=4))
+
     if training_args.do_predict:
         logging.info("*** Predict ***")
 
@@ -196,7 +212,7 @@ def main():
             predictions = np.argmax(predictions, axis=1)
 
         output_test_file = os.path.join(
-            training_args.output_dir, f"{test_dataset.args.task_name}_predict.json"
+            data_args.data_dir, f"{test_dataset.args.task_name}_predict.json"
         )
         if trainer.is_world_process_zero():
             with open(output_test_file, "w") as writer:

@@ -12,13 +12,9 @@ def read_data(filename, has_label, dataset_name):
     for sample in samples:
         if has_label:
             labels.append(sample[-1])
-            text_a.append(sample[1])
-            if dataset_name == "ocnli":
-                text_b.append(sample[2])
-        else:
-            text_a.append(sample[0])
-            if dataset_name == "ocnli":
-                text_b.append(sample[1])
+        text_a.append(sample[1])
+        if dataset_name == "ocnli":
+            text_b.append(sample[2])
     if dataset_name == "ocnli":
         texts = [[x1, x2] for x1, x2 in zip(text_a, text_b)]
     else:
@@ -50,8 +46,6 @@ if __name__ == '__main__':
         texts, labels = read_data(train_fn, True, name)
         test_corpus, _ = read_data(test_fn, False, name)
 
-        print(texts[0:5])
-        print(labels[0:5])
         x_train, x_valid, y_train, y_valid = train_test_split(
             texts, labels, stratify=labels, test_size=0.1, random_state=2020)
 

@@ -17,13 +17,12 @@ python run_classifier.py \
     --do_predict \
     --data_dir data/$TASK_NAME \
     --max_seq_length $MAX_SEQ_LEN \
-    --per_device_train_batch_size 32 \
-    --per_device_eval_batch_size 32 \
+    --per_device_train_batch_size 128 \
+    --per_device_eval_batch_size 128 \
     --learning_rate 2e-5 \
-    --save_steps 1000 \
-    --eval_step 500 \
+    --save_steps 500 \
+    --eval_step 100 \
     --evaluation_strategy steps \
     --num_train_epochs $NUM_EPOCHS \
     --output_dir $OUTPUT_DIR \
-    --overwrite_output_dir \
-    --overwrite_cache
+    --overwrite_output_dir

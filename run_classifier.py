@@ -47,14 +47,12 @@ def compute_metrics(task_name, preds, labels):
 TASK_OUTPUT_MODE = {
     "ocemotion": "classification",
     "ocnli": "classification",
-    "tnews": "classification",
-    "enews": "classification"
+    "tnews": "classification"
 }
 TASK_NUM_LABELS = {
     "ocemotion": 7,
     "ocnli": 3,
-    "tnews": 15,
-    "enews": 3
+    "tnews": 15
 }
 
 def main():
@@ -109,14 +107,13 @@ def main():
         if training_args.do_train:
             train_dataset = ClassifierDataset(data_args, tokenizer, cache_dir=model_args.cache_dir)
             label_map = {i: label for i, label in enumerate(train_dataset.get_labels())}
-        if training_args.do_eval:
+        if training_args.do_eval or training_args.do_predict:
             eval_dataset = ClassifierDataset(data_args, tokenizer, mode="dev", cache_dir=model_args.cache_dir)
             if not label_map:
                 label_map = {i: label for i, label in enumerate(eval_dataset.get_labels())}
-        if training_args.do_predict:
-            test_dataset = ClassifierDataset(data_args, tokenizer, mode="test", cache_dir=model_args.cache_dir)
-            if not label_map:
-                label_map = {i: label for i, label in enumerate(test_dataset.get_labels())}
+            if training_args.do_predict:
+                test_dataset = ClassifierDataset(data_args, tokenizer, mode="test", cache_dir=model_args.cache_dir)
+                training_args.do_eval = False
         logger.info("Label Map: " + str(label_map))
     else:
         logger.error("Must specify mode: do_train / do_eval / do_predict")
@@ -207,23 +204,38 @@ def main():
     if training_args.do_predict:
         logging.info("*** Predict ***")
 
-        predictions = trainer.predict(test_dataset=test_dataset).predictions
-        if TASK_OUTPUT_MODE[test_dataset.args.task_name] == "classification":
+        def do_predict(dataset, has_label=False):
+            predictions = trainer.predict(test_dataset=dataset).predictions
             predictions = np.argmax(predictions, axis=1)
 
-        output_test_file = os.path.join(
-            data_args.data_dir, f"{test_dataset.args.task_name}_predict.json"
-        )
-        if trainer.is_world_process_zero():
-            with open(output_test_file, "w") as writer:
-                logger.info("***** Test results {} *****".format(test_dataset.args.task_name))
-                for index, pred in enumerate(predictions):
-                    if TASK_OUTPUT_MODE[test_dataset.args.task_name] == "regression":
-                        writer.write("%d\t%3.3f\n" % (index, pred))
-                    else:
-                        label = test_dataset.get_labels()[pred]
-                        line = {"id": index, "label": label}
-                        writer.write(str(line).replace("\'", "\"") + "\n")
+            if has_label:
+                output_test_file = os.path.join(
+                    data_args.data_dir, f"{dataset.args.task_name}_eval_wrong.txt")
+                eval_data_file = os.path.join(data_args.data_dir, "dev.txt")
+                label_maps = dataset.get_labels()
+                y_tures = [label_maps[sample.label] for sample in dataset]
+                y_preds = [label_maps[pred] for pred in predictions]
+                texts = [line.split("\t", 1)[1] for line in open(eval_data_file)]
+                if trainer.is_world_process_zero():
+                    with open(output_test_file, "w") as writer:
+                        logger.info("***** Eval results {} *****".format(dataset.args.task_name))
+                        for y_true, y_pred, text in zip(y_tures, y_preds, texts):
+                            if y_true != y_pred:
+                                writer.write(f"{y_true}\t{y_pred}\t{text}")
+            else:
+                output_test_file = os.path.join(
+                    training_args.output_dir, f"{dataset.args.task_name}_predict.json")
+                if trainer.is_world_process_zero():
+                    with open(output_test_file, "w") as writer:
+                        logger.info("***** Test results {} *****".format(dataset.args.task_name))
+                        for index, pred in enumerate(predictions):
+                            label = dataset.get_labels()[pred]
+                            line = {"id": index, "label": label}
+                            writer.write(str(line).replace("\'", "\"") + "\n")
+
+        do_predict(eval_dataset, True)
+        do_predict(test_dataset)
+
     return eval_results
 
 

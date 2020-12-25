@@ -333,7 +333,7 @@ class ClassifierDataset(Dataset):
                 f"Loading features from cached file {cached_features_file} [took %.3f s]", time.time() - start
             )
             for feat in self.features[:5]:
-                logger.info("*** Features ***")
+                logger.info("*** {} Features ***".format(mode.value))
                 logger.info(f"features: {feat}")
         else:
             logger.info(f"Creating features from dataset file at {args.data_dir}")

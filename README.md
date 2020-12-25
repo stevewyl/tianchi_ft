@@ -30,6 +30,8 @@ python gen_data.py
 # PRE_TRAINED_MODEL_NAME 预训练模型，可选 `roberta`
 # MAX_SEQ_LEN　最大序列长度，根据数据集具体情况设置，后续应该改为动态长度
 bash run_classifier.sh $DATASET_NAME $PRE_TRAINED_MODEL_NAME $MAX_SEQ_LEN
+# 跑全部任务
+bash run_all.sh
 ```
 
 ### 提交成绩

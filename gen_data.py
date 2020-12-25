@@ -63,7 +63,7 @@ if __name__ == '__main__':
         save_list(f"{data_dir}/label.txt", sorted(list(set(labels))))
 
         print(f"{name} dataset train/dev/test: {len(train_corpus)}/{len(valid_corpus)}/{len(test_corpus)}")
-        seq_lens = [len(text) if isinstance(text, str) else len(text[0]) + len(text[1]) for text in texts + test_corpus]
+        seq_lens = [len(text) + 1 if isinstance(text, str) else len(text[0]) + len(text[1]) + 2 for text in texts + test_corpus]
         sl_50 = np.percentile(seq_lens, 50)
         sl_90 = np.percentile(seq_lens, 90)
         sl_99 = np.percentile(seq_lens, 99)

@@ -113,7 +113,6 @@ def main():
                 label_map = {i: label for i, label in enumerate(eval_dataset.get_labels())}
             if training_args.do_predict:
                 test_dataset = ClassifierDataset(data_args, tokenizer, mode="test", cache_dir=model_args.cache_dir)
-                training_args.do_eval = False
         logger.info("Label Map: " + str(label_map))
     else:
         logger.error("Must specify mode: do_train / do_eval / do_predict")

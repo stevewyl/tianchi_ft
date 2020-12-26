@@ -10,6 +10,10 @@ if [ -f $OUTPUT_DIR"/pytorch_model.bin" ]; then
     MODEL_NAME_FULL=$OUTPUT_DIR
 fi
 
+TIMESTAMP=$(date +%m%d%H%M)
+LOG_FILE=log/$TASK_NAME"_"$TIMESTAMP".log"
+echo "[TASK] "$TASK_NAME" [LOG] "$LOG_FILE
+
 python -u run_classifier.py \
     --model_name $MODEL_NAME_FULL \
     --task_name $TASK_NAME \
@@ -30,6 +34,6 @@ python -u run_classifier.py \
     --output_dir $OUTPUT_DIR \
     --overwrite_output_dir \
     --load_best_model_at_end \
-    --metric_for_best_model "eval_f1"
+    --metric_for_best_model "eval_f1" > $LOG_FILE 2>&1
 
-# rm -rf $OUTPUT_DIR/checkpoint-*
+rm -rf $OUTPUT_DIR/checkpoint-*

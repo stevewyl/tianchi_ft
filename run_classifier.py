@@ -10,7 +10,7 @@ from transformers import BertTokenizer, BertModel, BertConfig, BertForSequenceCl
 from transformers import EvalPrediction, Trainer, set_seed
 from transformers import HfArgumentParser, TrainingArguments
 from transformers import EarlyStoppingCallback
-from sklearn.metrics import accuracy_score, f1_score, classification_report
+from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
 
 from dataset import DataTrainingArguments, ClassifierDataset
 
@@ -147,7 +147,7 @@ def main():
 
     # Initialize our Trainer
     callbacks = [
-        EarlyStoppingCallback(5)
+        EarlyStoppingCallback(6)
     ]
     trainer = Trainer(
         model=model,
@@ -174,23 +174,24 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        trainer.compute_metrics = build_compute_metrics_fn(eval_dataset.args.task_name)
-        eval_result = trainer.evaluate(eval_dataset=eval_dataset)
+        if training_args.do_train:
+            trainer.compute_metrics = build_compute_metrics_fn(eval_dataset.args.task_name)
+            eval_result = trainer.evaluate(eval_dataset=eval_dataset)
 
-        output_eval_file = os.path.join(
-            training_args.output_dir, f"eval_results_{eval_dataset.args.task_name}.txt"
-        )
-        if trainer.is_world_process_zero():
-            with open(output_eval_file, "w") as writer:
-                logger.info("***** Eval results {} *****".format(eval_dataset.args.task_name))
-                for key, value in eval_result.items():
-                    logger.info("  %s = %s", key, value)
-                    writer.write("%s = %s\n" % (key, value))
+            output_eval_file = os.path.join(
+                training_args.output_dir, f"eval_results_{eval_dataset.args.task_name}.txt"
+            )
+            if trainer.is_world_process_zero():
+                with open(output_eval_file, "w") as writer:
+                    logger.info("*****Overall Eval results {} *****".format(eval_dataset.args.task_name))
+                    for key, value in eval_result.items():
+                        logger.info("  %s = %s", key, value)
+                        writer.write("%s = %s\n" % (key, value))
 
-            eval_results.update(eval_result)
+                eval_results.update(eval_result)
 
         predictions = trainer.predict(eval_dataset).predictions
-        if TASK_OUTPUT_MODE[test_dataset.args.task_name] == "classification":
+        if TASK_OUTPUT_MODE[eval_dataset.args.task_name] == "classification":
             predictions = np.argmax(predictions, axis=1)
 
         label_maps = eval_dataset.get_labels()
@@ -198,7 +199,12 @@ def main():
         y_preds = [label_maps[pred] for pred in predictions]
 
         logger.info("Classification Report (Dev Set)")
-        logger.info("\n" + classification_report(y_tures, y_preds, digits=4))
+        label_trues = None
+        if eval_dataset.args.task_name == "ocnli":
+            label_trues = ["蕴含", "中性", "不相关"]
+        logger.info("\n" + classification_report(y_tures, y_preds, target_names=label_trues, digits=4))
+        logger.info("Confusion Matrix (Dev Set)")
+        print(confusion_matrix(y_tures, y_preds))
 
     if training_args.do_predict:
         logging.info("*** Predict ***")
@@ -209,7 +215,7 @@ def main():
 
             if has_label:
                 output_test_file = os.path.join(
-                    data_args.data_dir, f"{dataset.args.task_name}_eval_wrong.txt")
+                    training_args.output_dirdata_args.data_dir, f"{dataset.args.task_name}_eval_wrong.txt")
                 eval_data_file = os.path.join(data_args.data_dir, "dev.txt")
                 label_maps = dataset.get_labels()
                 y_tures = [label_maps[sample.label] for sample in dataset]
@@ -223,7 +229,7 @@ def main():
                                 writer.write(f"{y_true}\t{y_pred}\t{text}")
             else:
                 output_test_file = os.path.join(
-                    training_args.output_dir, f"{dataset.args.task_name}_predict.json")
+                    data_args.data_dir, f"{dataset.args.task_name}_predict.json")
                 if trainer.is_world_process_zero():
                     with open(output_test_file, "w") as writer:
                         logger.info("***** Test results {} *****".format(dataset.args.task_name))

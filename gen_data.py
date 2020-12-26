@@ -1,7 +1,11 @@
 import os
+from collections import Counter
 
 import numpy as np
+from pprint import pprint
 from sklearn.model_selection import train_test_split
+
+# TODO: 数据增强
 
 def read_data(filename, has_label, dataset_name):
     dataset_name = dataset_name.lower()
@@ -68,3 +72,6 @@ if __name__ == '__main__':
         sl_90 = np.percentile(seq_lens, 90)
         sl_99 = np.percentile(seq_lens, 99)
         print(f"Sequence length 50%/90%/99%: {sl_50}/{sl_90}/{sl_99}")
+
+        print("Label Distribution:")
+        pprint(Counter(labels))
